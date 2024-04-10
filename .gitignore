@@ -1,0 +1,37 @@
+# gitignore
+# Node.js
+node_modules/
+
+# Build files
+dist/
+build/
+
+# Dependency directories
+/.pnp/
+.pnp.js
+
+# Testing
+/coverage/
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+
+# Compiled output
+*.min.js
+*.min.css
+
+# Cache and temporary files
+.cache/
+.tmp/
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
