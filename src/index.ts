@@ -159,27 +159,27 @@ async function processQueue(
     return;
   }
 
-  // const sceneUrl = `${url}/team/${sceneMeta.teamId}/branch/${sceneMeta.branchId}/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
-  // console.log("opening scene", sceneUrl);
-  // await page.goto(sceneUrl);
-  // try {
-  //   // 30s timeout, if the page is not loaded in 30s, it will throw error
-  //   const timeout = 6 * 1000;
-  //   // wait for id=scene-save-button to be enabled
+  const sceneUrl = `${url}/team/${sceneMeta.teamId}/branch/${sceneMeta.branchId}/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
+  console.log("opening scene", sceneUrl);
+  await page.goto(sceneUrl);
+  try {
+    // 30s timeout, if the page is not loaded in 30s, it will throw error
+    const timeout = 6 * 1000;
+    // wait for id=scene-save-button to be enabled
 
-  //   await page.waitForSelector("#scene-save-button:enabled", { timeout });
-  //   // click save button
-  //   await page.click("#scene-save-button");
-  //   // wait for button to be not .ant-btn-loading
-  //   await page.waitForSelector("#scene-unlock-button", {
-  //     timeout,
-  //   });
-  //   console.log("scene successfully saved", sceneUrl);
-  // } catch (e: any) {
-  //   console.error("timeout for scene ", sceneUrl, e.message);
-  // }
-  // console.log("scenes index: ", index);
-  // await page.close();
+    await page.waitForSelector("#scene-save-button:enabled", { timeout });
+    // click save button
+    await page.click("#scene-save-button");
+    // wait for button to be not .ant-btn-loading
+    await page.waitForSelector("#scene-unlock-button", {
+      timeout,
+    });
+    console.log("scene successfully saved", sceneUrl);
+  } catch (e: any) {
+    console.error("timeout for scene ", sceneUrl, e.message);
+  }
+  console.log("scenes index: ", index);
+  await page.close();
   try {
     // unlock the scene
     await request.post(
