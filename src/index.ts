@@ -79,6 +79,9 @@ const queue: SceneMeta[] = [];
   const menu = await getMenu();
   console.log("menu: ", menu.length);
   pushAllScenesFromMenu(menu);
+
+  await replaceSceneKey(queue);
+
   console.log("all scenes: ", queue.length);
 
   const browser = await puppeteer.launch({
@@ -129,7 +132,8 @@ function pushAllScenesFromMenu(menu: MenuItem[]) {
     if (item.routeType === "Scene") {
       queue.push({
         teamId: process.env.TEAM_ID!,
-        appId: item.routeConfig.appId ?? process.env.PORTAL_ID!,
+        // TODO wrong appId
+        appId: undefined as any,
         branchId: process.env.BRANCH_ID!,
         key: item.routeConfig.sceneKey,
       });
@@ -140,61 +144,91 @@ function pushAllScenesFromMenu(menu: MenuItem[]) {
   }
 }
 
+async function replaceSceneKey(scenes: SceneMeta[]) {
+  const allSceneKeys = queue.map((scene) => scene.key);
+  // request real appId
+  const AppIds = await request.post<{
+    data: { appId: string; metaKey: string }[];
+  }>("/api/trantor/console/module/find-ids-by-meta-keys", allSceneKeys, {
+    headers: {
+      "Trantor2-App": process.env.PORTAL_ID,
+      "Trantor2-Team": process.env.TEAM_ID,
+      "Trantor2-Branch": process.env.BRANCH_ID,
+    },
+  });
+
+  const sceneKeyAppIdMap = AppIds.data.data.reduce((acc, item) => {
+    acc[item.metaKey] = item.appId;
+    return acc;
+  }, {} as Record<string, string>);
+
+  scenes.forEach((scene) => {
+    if (sceneKeyAppIdMap[scene.key]) {
+      scene.appId = sceneKeyAppIdMap[scene.key];
+    } else {
+      console.error("appId not found for scene", scene.key, scene);
+    }
+  });
+}
+
 async function processQueue(
   sceneMeta: SceneMeta,
   index: number,
   browser: Browser
 ) {
-  const page = await browser.newPage();
-  // set cookie
-  await page.setCookie({
-    name: process.env.COOKIE_NAME!,
-    value: process.env.COOKIE_VALUE!,
-    domain: process.env.COOKIE_DOMAIN!,
-  });
-
-  // validate the sceneMeta
-  if (!sceneMeta.appId || !sceneMeta.branchId || !sceneMeta.key) {
-    console.error("invalid sceneMeta", sceneMeta);
-    return;
-  }
-
-  const sceneUrl = `${url}/team/${sceneMeta.teamId}/branch/${sceneMeta.branchId}/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
-  console.log("opening scene", sceneUrl);
-  await page.goto(sceneUrl);
-  try {
-    // 30s timeout, if the page is not loaded in 30s, it will throw error
-    const timeout = 6 * 1000;
-    // wait for id=scene-save-button to be enabled
-
-    await page.waitForSelector("#scene-save-button:enabled", { timeout });
-    // click save button
-    await page.click("#scene-save-button");
-    // wait for button to be not .ant-btn-loading
-    await page.waitForSelector("#scene-unlock-button", {
-      timeout,
+  const retries = 3;
+  for (let i = 0; i < retries; i++) {
+    const page = await browser.newPage();
+    // set cookie
+    await page.setCookie({
+      name: process.env.COOKIE_NAME!,
+      value: process.env.COOKIE_VALUE!,
+      domain: process.env.COOKIE_DOMAIN!,
     });
-    console.log("scene successfully saved", sceneUrl);
-  } catch (e: any) {
-    console.error("timeout for scene ", sceneUrl, e.message);
-  }
-  console.log("scenes index: ", index);
-  await page.close();
-  try {
-    // unlock the scene
-    await request.post(
-      `/api/trantor/console/dlock/unlock/${sceneMeta.key}`,
-      {},
-      {
-        headers: {
-          "Trantor2-App": sceneMeta.appId,
-          "Trantor2-Team": sceneMeta.teamId,
-          "Trantor2-Branch": sceneMeta.branchId,
-        },
-      }
-    );
-    console.log("scene unlocked", sceneMeta.key);
-  } catch (e) {
-    console.error("error unlocking scene", sceneMeta.key);
+
+    // validate the sceneMeta
+    if (!sceneMeta.appId || !sceneMeta.branchId || !sceneMeta.key) {
+      console.error("invalid sceneMeta", sceneMeta);
+      return;
+    }
+
+    const sceneUrl = `${url}/team/${sceneMeta.teamId}/branch/${sceneMeta.branchId}/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
+    console.log("opening scene", sceneUrl);
+    await page.goto(sceneUrl);
+    try {
+      // 30s timeout, if the page is not loaded in 30s, it will throw error
+      const timeout = 10 * 1000;
+      // wait for id=scene-save-button to be enabled
+
+      await page.waitForSelector("#scene-save-button:enabled", { timeout });
+      // click save button
+      await page.click("#scene-save-button");
+      // wait for button to be not .ant-btn-loading
+      await page.waitForSelector("#scene-unlock-button", {
+        timeout,
+      });
+      console.log("scene successfully saved", sceneUrl);
+      console.log("scenes index: ", index);
+      await page.close();
+
+      // unlock the scene
+      await request.post(
+        `/api/trantor/console/dlock/unlock/${sceneMeta.key}`,
+        {},
+        {
+          headers: {
+            "Trantor2-App": sceneMeta.appId,
+            "Trantor2-Team": sceneMeta.teamId,
+            "Trantor2-Branch": sceneMeta.branchId,
+          },
+        }
+      );
+      console.log("scene unlocked", sceneMeta.key);
+      break;
+    } catch (e) {
+      console.error(e, sceneMeta.key, sceneMeta);
+      await page.close();
+    }
+    console.log("retrying scene", sceneMeta.key);
   }
 }
