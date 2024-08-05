@@ -206,22 +206,15 @@ async function processQueue(sceneMeta, index, browser) {
             // click save button
             await page.click("#scene-save-button");
             // wait until update api finish
-            const response = await page.waitForResponse((response) => response.url().includes("/api/trantor/console/scenes/data-manager/update"));
+            const response = await page.waitForResponse((response) => response
+                .url()
+                .includes("/api/trantor/console/scenes/data-manager/update"));
             if (response.status() !== 200) {
                 throw new Error("failed to save scene");
             }
             console.log("scene successfully saved", sceneUrl);
             console.log("scenes index: ", index);
             await page.close();
-            // unlock the scene
-            await request.post(`/api/trantor/console/dlock/unlock/${sceneMeta.key}`, {}, {
-                headers: {
-                    "Trantor2-App": sceneMeta.appId,
-                    "Trantor2-Team": process.env.TEAM_ID,
-                    "Trantor2-Branch": process.env.BRANCH_ID,
-                },
-            });
-            console.log("scene unlocked before close", sceneUrl);
             break;
         }
         catch (e) {
@@ -231,6 +224,15 @@ async function processQueue(sceneMeta, index, browser) {
             }
             await page.close();
         }
+        // unlock the scene
+        await request.post(`/api/trantor/console/dlock/unlock/${sceneMeta.key}`, {}, {
+            headers: {
+                "Trantor2-App": sceneMeta.appId,
+                "Trantor2-Team": process.env.TEAM_ID,
+                "Trantor2-Branch": process.env.BRANCH_ID,
+            },
+        });
+        console.log("scene unlocked before close", sceneUrl);
         console.log("retrying scene", sceneUrl);
     }
 }
