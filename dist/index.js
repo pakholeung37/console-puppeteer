@@ -45,7 +45,7 @@ const from = args.includes("--from")
     : "menu";
 const timeoutPerScene = args.includes("--timeout")
     ? Number(args[args.indexOf("--timeout") + 1])
-    : 10 * 1000;
+    : 20 * 1000;
 const headless = args.includes("--headless")
     ? args[args.indexOf("--headless") + 1] === "true"
     : true;
@@ -181,15 +181,15 @@ async function processQueue(sceneMeta, index, browser) {
             value: process.env.COOKIE_VALUE,
             domain: process.env.COOKIE_DOMAIN,
         });
-        // validate the sceneMeta
-        if (!sceneMeta.appId || !sceneMeta.key) {
-            console.error("invalid sceneMeta", sceneMeta);
-            return;
-        }
-        const sceneUrl = `${url}/team/${sceneMeta.teamId}${process.env.BRANCH_ID ? `/branch/${process.env.BRANCH_ID}` : ""}/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
-        console.log("opening scene", sceneUrl);
-        await page.goto(sceneUrl);
         try {
+            // validate the sceneMeta
+            if (!sceneMeta.appId || !sceneMeta.key) {
+                console.error("invalid sceneMeta", sceneMeta);
+                return;
+            }
+            const sceneUrl = `${url}/team/${sceneMeta.teamId}${process.env.BRANCH_ID ? `/branch/${process.env.BRANCH_ID}` : ""}/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
+            console.log("opening scene", sceneUrl);
+            await page.goto(sceneUrl);
             // wait for id=scene-save-button to be enabled
             await page.waitForSelector("#scene-save-button:enabled", {
                 timeout: timeoutPerScene,
