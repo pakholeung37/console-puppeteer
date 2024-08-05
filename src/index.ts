@@ -253,16 +253,29 @@ async function processQueue(
       value: process.env.COOKIE_VALUE!,
       domain: process.env.COOKIE_DOMAIN!,
     });
+    const sceneUrl = `${url}/team/${sceneMeta.teamId}${
+      process.env.BRANCH_ID ? `/branch/${process.env.BRANCH_ID}` : ""
+    }/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
     try {
+      // unlock scene
+      await request.post(
+        `/api/trantor/console/dlock/unlock/${sceneMeta.key}`,
+        {},
+        {
+          headers: {
+            "Trantor2-App": sceneMeta.appId,
+            "Trantor2-Team": process.env.TEAM_ID,
+            "Trantor2-Branch": process.env.BRANCH_ID,
+          },
+        }
+      );
+      console.log("scene unlocked before open", sceneUrl);
       // validate the sceneMeta
       if (!sceneMeta.appId || !sceneMeta.key) {
         console.error("invalid sceneMeta", sceneMeta);
         return;
       }
 
-      const sceneUrl = `${url}/team/${sceneMeta.teamId}${
-        process.env.BRANCH_ID ? `/branch/${process.env.BRANCH_ID}` : ""
-      }/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
       console.log("opening scene", sceneUrl);
       await page.goto(sceneUrl);
       // wait for id=scene-save-button to be enabled
@@ -272,10 +285,14 @@ async function processQueue(
       });
       // click save button
       await page.click("#scene-save-button");
-      // wait for button to be not .ant-btn-loading
-      await page.waitForSelector("#scene-unlock-button", {
-        timeout: timeoutPerScene,
-      });
+      // wait until update api finish
+      const response = await page.waitForResponse((response) =>
+        response.url().includes("/api/trantor/console/scenes/data-manager/update")
+      );
+      if (response.status() !== 200) {
+        throw new Error("failed to save scene");
+      }
+
       console.log("scene successfully saved", sceneUrl);
       console.log("scenes index: ", index);
       await page.close();
@@ -292,16 +309,16 @@ async function processQueue(
           },
         }
       );
-      console.log("scene unlocked", sceneMeta.key);
+      console.log("scene unlocked before close", sceneUrl);
       break;
     } catch (e) {
-      console.error(e, sceneMeta.key, sceneMeta);
+      console.error(e, "sceneUrl", sceneUrl);
       if (retries === i + 1) {
         errorScenes.push(sceneMeta);
       }
       await page.close();
     }
-    console.log("retrying scene", sceneMeta.key);
+    console.log("retrying scene", sceneUrl);
   }
 }
 
