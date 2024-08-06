@@ -88,6 +88,7 @@ type SceneMeta = {
   key: string;
   appId: string;
   teamId: string;
+  url?: string;
   // branchId: string;
 };
 
@@ -303,7 +304,10 @@ async function processQueue(
     } catch (e) {
       console.error(e, "sceneUrl", sceneUrl);
       if (retries === i + 1) {
-        errorScenes.push(sceneMeta);
+        errorScenes.push({
+          ...sceneMeta,
+          url: sceneUrl,
+        });
       }
       await page.close();
     }

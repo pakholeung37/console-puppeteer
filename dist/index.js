@@ -220,7 +220,10 @@ async function processQueue(sceneMeta, index, browser) {
         catch (e) {
             console.error(e, "sceneUrl", sceneUrl);
             if (retries === i + 1) {
-                errorScenes.push(sceneMeta);
+                errorScenes.push({
+                    ...sceneMeta,
+                    url: sceneUrl,
+                });
             }
             await page.close();
         }
