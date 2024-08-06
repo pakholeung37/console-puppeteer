@@ -45,7 +45,7 @@ const from = args.includes("--from")
     : "menu";
 const timeoutPerScene = args.includes("--timeout")
     ? Number(args[args.indexOf("--timeout") + 1])
-    : 20 * 1000;
+    : 30 * 1000;
 const headless = args.includes("--headless")
     ? args[args.indexOf("--headless") + 1] === "true"
     : true;
