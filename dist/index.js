@@ -58,7 +58,7 @@ const request = axios_1.default.create({
     },
 });
 const queue = [];
-const errorScenes = [];
+let errorScenes = [];
 async function getMenu() {
     const menu = await request.get(`/api/trantor/menu/${process.env.PORTAL_ID}`, {
         params: {
@@ -266,6 +266,13 @@ async function processQueue(sceneMeta, index, browser) {
         args: ["--start-maximized"],
     });
     await bluebird_1.default.map(queue, (scene, index) => processQueue(scene, index, browser), {
+        concurrency: parallel,
+    });
+    // 从新跑一遍失败的场景
+    const errorScenesCopy = [...errorScenes];
+    console.log("retry error scenes", errorScenes);
+    errorScenes = [];
+    await bluebird_1.default.map(errorScenesCopy, (scene, index) => processQueue(scene, index, browser), {
         concurrency: parallel,
     });
     console.log("error scenes", errorScenes);

@@ -94,7 +94,7 @@ type SceneMeta = {
 
 const queue: SceneMeta[] = [];
 
-const errorScenes: SceneMeta[] = [];
+let errorScenes: SceneMeta[] = [];
 
 type MenuItem = {
   routeType: "None" | "Scene";
@@ -362,6 +362,18 @@ async function processQueue(
       concurrency: parallel,
     }
   );
+  // 从新跑一遍失败的场景
+  const errorScenesCopy = [...errorScenes];
+  console.log("retry error scenes", errorScenes);
+  errorScenes = [];
+  await bluebird.map(
+    errorScenesCopy,
+    (scene, index) => processQueue(scene, index, browser),
+    {
+      concurrency: parallel,
+    }
+  );
+
   console.log("error scenes", errorScenes);
   console.log("error scenes count", errorScenes.length);
   await browser.close();
