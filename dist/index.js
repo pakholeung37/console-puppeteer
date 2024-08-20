@@ -100,7 +100,7 @@ async function pushAllScenesFromMenu() {
 /**
  *
  */
-async function getModules(teamId) {
+async function getModules() {
     const modules = await request.get(`/api/trantor/console/module/query?type=Module`, {
         headers: {
             "Trantor2-Team": process.env.TEAM_ID,
@@ -109,43 +109,49 @@ async function getModules(teamId) {
     });
     return modules.data.data;
 }
-async function getScenesFromModule(teamId, moduleId) {
-    const { data: resourcesTree } = await request.get(`/api/trantor/console/meta-data/resource-tree/folders?teamId=${teamId}&appId=${moduleId}&v2=true`, {
-        headers: {
-            "Trantor2-App": moduleId,
-            "Trantor2-Team": process.env.TEAM_ID,
-            "Trantor2-Branch": process.env.BRANCH_ID,
-        },
-    });
-    // filter all the scenes
-    const scenes = [];
-    const findScenes = (resource) => {
-        if (resource.type === "Scene") {
-            scenes.push({
-                key: resource.key,
-                appId: moduleId,
-                teamId: teamId,
-                // branchId: process.env.BRANCH_ID!,
-            });
-        }
-        if (resource.children) {
-            resource.children.forEach(findScenes);
-        }
-    };
-    resourcesTree.data.forEach(findScenes);
-    return scenes;
+async function getScenesFromModule(moduleId) {
+    try {
+        const { data: resourcesTree } = await request.get(`/api/trantor/console/meta-data/resource-tree/folders?teamId=${process.env.TEAM_ID}&appId=${moduleId}&v2=true`, {
+            headers: {
+                "Trantor2-App": moduleId,
+                "Trantor2-Team": process.env.TEAM_ID,
+                "Trantor2-Branch": process.env.BRANCH_ID,
+            },
+        });
+        // filter all the scenes
+        const scenes = [];
+        const findScenes = (resource) => {
+            if (resource.type === "Scene") {
+                scenes.push({
+                    key: resource.key,
+                    appId: moduleId,
+                    teamId: process.env.TEAM_ID,
+                    // branchId: process.env.BRANCH_ID!,
+                });
+            }
+            if (resource.children) {
+                resource.children.forEach(findScenes);
+            }
+        };
+        resourcesTree.data.forEach(findScenes);
+        return scenes;
+    }
+    catch (e) {
+        console.error("failed to get scenes from module", moduleId);
+        return [];
+    }
 }
 /**
  * 从模块中获取所有的场景
  * @param modules
  */
 async function pushAllScenesFromModules() {
-    const modules = await getModules(process.env.TEAM_ID);
-    const scenes = await Promise.all(modules.map((module) => getScenesFromModule(process.env.TEAM_ID, module.id)));
+    const modules = await getModules();
+    const scenes = await Promise.all(modules.map((module) => getScenesFromModule(module.id)));
     scenes.forEach((scene) => queue.push(...scene));
 }
 async function pushAllScenesFromModule(moduleId) {
-    const scenes = await getScenesFromModule(process.env.TEAM_ID, moduleId);
+    const scenes = await getScenesFromModule(moduleId);
     queue.push(...scenes);
 }
 async function replaceSceneKey(scenes) {
