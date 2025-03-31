@@ -107,12 +107,12 @@ type MenuItem = {
 
 async function getMenu() {
   const menu = await request.get<{ data: MenuItem[] }>(
-    `/api/trantor/menu/${process.env.PORTAL_ID}`,
+    `/api/trantor/menu/tree/${process.env.PORTAL_ID}`,
     {
-      params: {
-        appId: process.env.PORTAL_ID,
-        teamId: process.env.TEAM_ID,
-      },
+      // params: {
+      //   appId: process.env.PORTAL_ID,
+      //   teamId: process.env.TEAM_ID,
+      // },
       headers: {
         "Trantor2-App": process.env.PORTAL_ID,
         "Trantor2-Team": process.env.TEAM_ID,
