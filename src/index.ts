@@ -4,8 +4,98 @@ import axios from "axios";
 import dotenv from "dotenv";
 import { exit } from "process";
 import fs from "fs";
+import winston from "winston";
+import chalk from "chalk";
 
 dotenv.config();
+
+// Setup winston logger
+const logDirectory = "logs";
+if (!fs.existsSync(logDirectory)) {
+  fs.mkdirSync(logDirectory);
+}
+
+const currentDate = new Date();
+const host = process.env.HOST || "localhost";
+const subdomain = host.split(".")[0];
+const name = subdomain.split("://")[1] || "app";
+const teamId = process.env.TEAM_ID || "unknown";
+const appId = process.env.APP_ID || "unknown";
+const portalId = process.env.PORTAL_ID || "unknown";
+
+let logFileName = `${name}-${teamId}`;
+if (process.argv.includes("--from")) {
+  const from = process.argv[process.argv.indexOf("--from") + 1];
+  if (from === "menu") {
+    logFileName += `-portal${portalId}`;
+  } else if (from === "module") {
+    logFileName += `-module${appId}`;
+  }
+}
+logFileName += `-${currentDate.toISOString()}.log`;
+
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `${timestamp} ${level}: ${message}`;
+    })
+  ),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message }) => {
+          const ts = chalk.gray(`[${timestamp}]`);
+          if (level === "error") {
+            return `${ts} ${chalk.red.bold("ERROR")} ${chalk.red(message)}`;
+          } else {
+            return `${ts} ${chalk.green.bold("INFO")} ${chalk.white(message)}`;
+          }
+        })
+      )
+    }),
+    new winston.transports.File({ filename: `${logDirectory}/${logFileName}` }),
+  ],
+});
+
+// Custom log function to replace console.log
+const log = {
+  info: (message: string, ...args: any[]) => {
+    const fullMessage =
+      args.length > 0
+        ? `${message} ${args.map((arg) => JSON.stringify(arg)).join(" ")}`
+        : message;
+    logger.info(fullMessage);
+  },
+  error: (message: any, ...args: any[]) => {
+    const fullMessage =
+      args.length > 0
+        ? `${message} ${args.map((arg) => JSON.stringify(arg)).join(" ")}`
+        : message;
+    logger.error(fullMessage);
+  },
+  success: (message: string, ...args: any[]) => {
+    const fullMessage =
+      args.length > 0
+        ? `${message} ${args.map((arg) => JSON.stringify(arg)).join(" ")}`
+        : message;
+    logger.info(chalk.green.bold("✓ ") + fullMessage);
+  },
+  warning: (message: string, ...args: any[]) => {
+    const fullMessage =
+      args.length > 0
+        ? `${message} ${args.map((arg) => JSON.stringify(arg)).join(" ")}`
+        : message;
+    logger.info(chalk.yellow.bold("⚠ ") + fullMessage);
+  },
+  progress: (current: number, total: number, message: string = "") => {
+    const percent = Math.floor((current / total) * 100);
+    const progressBar = `[${chalk.cyan("=".repeat(Math.floor(percent / 5)))}${" ".repeat(20 - Math.floor(percent / 5))}] ${percent}%`;
+    logger.info(`${progressBar} ${message} (${current}/${total})`);
+  }
+};
 
 // read arg from command line like `node dist/index.js --parallel 4`
 const args = process.argv.slice(2);
@@ -16,21 +106,19 @@ if (
   process.env.COOKIE_VALUE === undefined ||
   process.env.COOKIE_DOMAIN === undefined
 ) {
-  console.error(
-    "Please provide the cookie name, cookie value and cookie domain"
-  );
+  log.error("Please provide the cookie name, cookie value and cookie domain");
   process.exit(1);
 }
 if (url === undefined) {
-  console.error("Please provide the console url");
+  log.error("Please provide the console url");
   process.exit(1);
 }
 if (process.env.TEAM_ID === undefined) {
-  console.error("Please provide the team id");
+  log.error("Please provide the team id");
   process.exit(1);
 }
 // if (process.env.BRANCH_ID === undefined) {
-//   console.error("Please provide the branch id");
+//   log.error("Please provide the branch id");
 //   process.exit(1);
 // }
 
@@ -40,7 +128,7 @@ const parallel = args.includes("--parallel")
   : 4;
 
 if (!url) {
-  console.error("Please provide the console url");
+  log.error("Please provide the console url");
   process.exit(1);
 }
 
@@ -145,7 +233,7 @@ async function pushAllScenesFromMenu() {
   };
   const menu = await getMenu();
   pushAllScenesFromMenuInternal(menu);
-  console.log("menu: ", menu.length);
+  log.info("menu: ", menu.length);
 }
 
 /**
@@ -194,7 +282,7 @@ async function getScenesFromModule(moduleId: string) {
     resourcesTree.data.forEach(findScenes);
     return scenes;
   } catch (e) {
-    console.error("failed to get scenes from module", moduleId);
+    log.error("failed to get scenes from module", moduleId);
     return [];
   }
 }
@@ -238,7 +326,7 @@ async function replaceSceneKey(scenes: SceneMeta[]) {
     if (sceneKeyAppIdMap[scene.key]) {
       scene.appId = sceneKeyAppIdMap[scene.key];
     } else {
-      console.error("appId not found for scene", scene.key, scene);
+      log.error("appId not found for scene", scene.key, scene);
     }
   });
 }
@@ -273,14 +361,14 @@ async function processQueue(
           },
         }
       );
-      console.log("scene unlocked before open", sceneUrl);
+      log.info("scene unlocked before open", sceneUrl);
       // validate the sceneMeta
       if (!sceneMeta.appId || !sceneMeta.key) {
-        console.error("invalid sceneMeta", sceneMeta);
+        log.error("invalid sceneMeta", sceneMeta);
         return;
       }
 
-      console.log("opening scene", sceneUrl);
+      log.info("opening scene", sceneUrl);
       await page.goto(sceneUrl);
       // wait for id=scene-save-button to be enabled
 
@@ -299,13 +387,13 @@ async function processQueue(
         throw new Error("failed to save scene");
       }
 
-      console.log("scene successfully saved", sceneUrl);
-      console.log("scenes index: ", index);
+      log.success("scene successfully saved", sceneUrl);
+      log.progress(queue.length - index - 1, queue.length, "scenes processed");
       await page.close();
 
       break;
     } catch (e) {
-      console.error(e, "sceneUrl", sceneUrl);
+      log.error(e, "sceneUrl", sceneUrl);
       if (retries === i + 1) {
         errorScenes.push({
           ...sceneMeta,
@@ -315,19 +403,23 @@ async function processQueue(
       await page.close();
     }
     // unlock the scene
-    await request.post(
-      `/api/trantor/console/dlock/unlock/${sceneMeta.key}`,
-      {},
-      {
-        headers: {
-          "Trantor2-App": sceneMeta.appId,
-          "Trantor2-Team": process.env.TEAM_ID,
-          "Trantor2-Branch": process.env.BRANCH_ID,
-        },
-      }
-    );
-    console.log("scene unlocked before close", sceneUrl);
-    console.log("retrying scene", sceneUrl);
+    try {
+      await request.post(
+        `/api/trantor/console/dlock/unlock/${sceneMeta.key}`,
+        {},
+        {
+          headers: {
+            "Trantor2-App": sceneMeta.appId,
+            "Trantor2-Team": process.env.TEAM_ID,
+            "Trantor2-Branch": process.env.BRANCH_ID,
+          },
+        }
+      );
+      log.info("scene unlocked before close", sceneUrl);
+    } catch (e) {
+      log.error(e, "sceneUrl", sceneUrl);
+    }
+    log.warning("retrying scene", sceneUrl);
   }
 }
 
@@ -337,20 +429,20 @@ async function processQueue(
     await pushAllScenesFromModules();
   } else if (from === "module") {
     if (process.env.APP_ID === undefined) {
-      console.error("Please provide the portal id");
+      log.error("Please provide the portal id");
       process.exit(1);
     }
     await pushAllScenesFromModule(process.env.APP_ID);
   } else {
     if (process.env.PORTAL_ID === undefined) {
-      console.error("Please provide the portal id");
+      log.error("Please provide the portal id");
       process.exit(1);
     }
     await pushAllScenesFromMenu();
     await replaceSceneKey(queue);
   }
 
-  console.log("all scenes: ", queue.length);
+  log.info("all scenes: ", queue.length);
 
   const browser = await puppeteer.launch({
     headless,
@@ -367,7 +459,7 @@ async function processQueue(
   );
   // 从新跑一遍失败的场景
   const errorScenesCopy = [...errorScenes];
-  console.log("retry error scenes", errorScenes);
+  log.warning("retry error scenes", errorScenes);
   errorScenes = [];
   await bluebird.map(
     errorScenesCopy,
@@ -377,38 +469,17 @@ async function processQueue(
     }
   );
 
-  console.log("error scenes", errorScenes);
-  console.log("error scenes count", errorScenes.length);
+  log.info("error scenes", errorScenes);
+  log.info("error scenes count", errorScenes.length);
   await browser.close();
 
   if (errorScenes.length === 0) {
-    console.log("All scenes are successfully saved");
+    log.success("All scenes are successfully saved");
     exit();
   }
   // write error scenes to log file
-  const currentDate = new Date();
-  const host = process.env.HOST || "localhost";
-  const subdomain = host.split(".")[0];
-  const name = subdomain.split("://")[1];
-  const teamId = process.env.TEAM_ID || "unknown";
-  const appId = process.env.APP_ID || "unknown";
-  const portalId = process.env.PORTAL_ID || "unknown";
-  let fileName = `${name}-${teamId}`;
-  if (from === "menu") {
-    fileName += `-portal${portalId}`;
-  } else if (from === "module") {
-    fileName += `-module${appId}`;
-  } else {
-  }
-  fileName += `-${currentDate.toISOString()}.log`;
-  const logDirectory = "logs";
-  if (!fs.existsSync(logDirectory)) {
-    fs.mkdirSync(logDirectory);
-  }
-  fs.writeFileSync(
-    `${logDirectory}/${fileName}`,
-    JSON.stringify(errorScenes, null, 2)
-  );
+  const errorLogFileName = `${logDirectory}/errors-${logFileName}`;
+  fs.writeFileSync(errorLogFileName, JSON.stringify(errorScenes, null, 2));
 
   exit();
 })();
