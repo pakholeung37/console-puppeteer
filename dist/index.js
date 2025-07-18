@@ -24,7 +24,7 @@ const name = subdomain.split("://")[1] || "app";
 const teamId = process.env.TEAM_ID || "unknown";
 const appId = process.env.APP_ID || "unknown";
 const portalId = process.env.PORTAL_ID || "unknown";
-let logFileName = `${name}-${teamId}`;
+let logFileName = `${currentDate.toISOString()}-${name}-${teamId}`;
 if (process.argv.includes("--from")) {
     const from = process.argv[process.argv.indexOf("--from") + 1];
     if (from === "menu") {
@@ -34,7 +34,7 @@ if (process.argv.includes("--from")) {
         logFileName += `-module${appId}`;
     }
 }
-logFileName += `-${currentDate.toISOString()}.log`;
+logFileName += `.log`;
 const logger = winston_1.default.createLogger({
     level: "info",
     format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.printf(({ timestamp, level, message }) => {
@@ -50,7 +50,7 @@ const logger = winston_1.default.createLogger({
                 else {
                     return `${ts} ${chalk_1.default.green.bold("INFO")} ${chalk_1.default.white(message)}`;
                 }
-            }))
+            })),
         }),
         new winston_1.default.transports.File({ filename: `${logDirectory}/${logFileName}` }),
     ],
@@ -85,7 +85,7 @@ const log = {
         const percent = Math.floor((current / total) * 100);
         const progressBar = `[${chalk_1.default.cyan("=".repeat(Math.floor(percent / 5)))}${" ".repeat(20 - Math.floor(percent / 5))}] ${percent}%`;
         logger.info(`${progressBar} ${message} (${current}/${total})`);
-    }
+    },
 };
 // read arg from command line like `node dist/index.js --parallel 4`
 const args = process.argv.slice(2);
@@ -161,7 +161,7 @@ async function pushAllScenesFromMenu() {
                 queue.push({
                     teamId: process.env.TEAM_ID,
                     // TODO wrong appId
-                    appId: undefined,
+                    appKey: undefined,
                     key: item.routeConfig.sceneKey,
                 });
             }
@@ -201,7 +201,7 @@ async function getScenesFromModule(moduleId) {
             if (resource.type === "Scene") {
                 scenes.push({
                     key: resource.key,
-                    appId: moduleId,
+                    appKey: moduleId,
                     teamId: process.env.TEAM_ID,
                     // branchId: process.env.BRANCH_ID!,
                 });
@@ -224,7 +224,7 @@ async function getScenesFromModule(moduleId) {
  */
 async function pushAllScenesFromModules() {
     const modules = await getModules();
-    const scenes = await Promise.all(modules.map((module) => getScenesFromModule(module.id)));
+    const scenes = await Promise.all(modules.map((module) => getScenesFromModule(module.key)));
     scenes.forEach((scene) => queue.push(...scene));
 }
 async function pushAllScenesFromModule(moduleId) {
@@ -232,26 +232,8 @@ async function pushAllScenesFromModule(moduleId) {
     queue.push(...scenes);
 }
 async function replaceSceneKey(scenes) {
-    const allSceneKeys = queue.map((scene) => scene.key);
-    // request real appId
-    const AppIds = await request.post("/api/trantor/console/module/find-ids-by-meta-keys", allSceneKeys, {
-        headers: {
-            "Trantor2-App": process.env.PORTAL_ID,
-            "Trantor2-Team": process.env.TEAM_ID,
-            "Trantor2-Branch": process.env.BRANCH_ID,
-        },
-    });
-    const sceneKeyAppIdMap = AppIds.data.data.reduce((acc, item) => {
-        acc[item.metaKey] = item.appId;
-        return acc;
-    }, {});
     scenes.forEach((scene) => {
-        if (sceneKeyAppIdMap[scene.key]) {
-            scene.appId = sceneKeyAppIdMap[scene.key];
-        }
-        else {
-            log.error("appId not found for scene", scene.key, scene);
-        }
+        scene.appKey = scene.key.split("$")[0];
     });
 }
 async function processQueue(sceneMeta, index, browser) {
@@ -264,19 +246,19 @@ async function processQueue(sceneMeta, index, browser) {
             value: process.env.COOKIE_VALUE,
             domain: process.env.COOKIE_DOMAIN,
         });
-        const sceneUrl = `${url}/team/${sceneMeta.teamId}${process.env.BRANCH_ID ? `/branch/${process.env.BRANCH_ID}` : ""}/app/${sceneMeta.appId}/scene/${sceneMeta.key}`;
+        const sceneUrl = `${url}/team/${sceneMeta.teamId}${process.env.BRANCH_ID ? `/branch/${process.env.BRANCH_ID}` : ""}/app/${sceneMeta.appKey}/scene/${sceneMeta.key}`;
         try {
             // unlock scene
             await request.post(`/api/trantor/console/dlock/unlock/${sceneMeta.key}`, {}, {
                 headers: {
-                    "Trantor2-App": sceneMeta.appId,
+                    "Trantor2-App": sceneMeta.appKey,
                     "Trantor2-Team": process.env.TEAM_ID,
                     "Trantor2-Branch": process.env.BRANCH_ID,
                 },
             });
             log.info("scene unlocked before open", sceneUrl);
             // validate the sceneMeta
-            if (!sceneMeta.appId || !sceneMeta.key) {
+            if (!sceneMeta.appKey || !sceneMeta.key) {
                 log.error("invalid sceneMeta", sceneMeta);
                 return;
             }
@@ -314,7 +296,7 @@ async function processQueue(sceneMeta, index, browser) {
         try {
             await request.post(`/api/trantor/console/dlock/unlock/${sceneMeta.key}`, {}, {
                 headers: {
-                    "Trantor2-App": sceneMeta.appId,
+                    "Trantor2-App": sceneMeta.appKey,
                     "Trantor2-Team": process.env.TEAM_ID,
                     "Trantor2-Branch": process.env.BRANCH_ID,
                 },
