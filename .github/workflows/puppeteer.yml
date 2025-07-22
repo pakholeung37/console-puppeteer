@@ -56,12 +56,6 @@ on:
         type: number
         default: 30000
 
-      extra_options:
-        description: "额外选项: app_id=xxx,branch_id=xxx,headless=true"
-        required: false
-        type: string
-        default: "headless=true"
-
 jobs:
   run-puppeteer:
     runs-on: ubuntu-latest
@@ -105,12 +99,6 @@ jobs:
 
           if [ -n "${{ inputs.timeout }}" ]; then
             ARGS="$ARGS --timeout ${{ inputs.timeout }}"
-          fi
-
-          if [ "${{ inputs.headless }}" = "true" ]; then
-            ARGS="$ARGS --headless true"
-          else
-            ARGS="$ARGS --headless false"
           fi
 
           echo "Running with arguments: $ARGS"
