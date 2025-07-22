@@ -146,6 +146,30 @@ const headless = args.includes("--headless")
   ? args[args.indexOf("--headless") + 1] === "true"
   : true;
 
+// Log all parameters before running
+log.info("=== SCRIPT PARAMETERS ===");
+log.info("Environment Variables:");
+log.info(`  HOST: ${process.env.HOST}`);
+log.info(`  TEAM_ID: ${process.env.TEAM_ID}`);
+log.info(`  PROTAL_KEY: ${process.env.PROTAL_KEY}`);
+log.info(`  APP_ID: ${process.env.APP_ID}`);
+log.info(`  BRANCH_ID: ${process.env.BRANCH_ID}`);
+log.info(`  COOKIE_NAME: ${process.env.COOKIE_NAME}`);
+log.info(`  COOKIE_VALUE: ${process.env.COOKIE_VALUE ? 
+  `${process.env.COOKIE_VALUE.substring(0, 4)}***${process.env.COOKIE_VALUE.substring(process.env.COOKIE_VALUE.length - 4)}` : 
+  'undefined'}`);
+log.info(`  COOKIE_DOMAIN: ${process.env.COOKIE_DOMAIN}`);
+log.info("Command Line Arguments:");
+log.info(`  Raw args: ${JSON.stringify(args)}`);
+log.info(`  --from: ${from}`);
+log.info(`  --parallel: ${parallel}`);
+log.info(`  --timeout: ${timeoutPerScene}ms`);
+log.info(`  --headless: ${headless}`);
+log.info("Derived Values:");
+log.info(`  URL: ${url}`);
+log.info(`  Log file: ${logFileName}`);
+log.info("=========================");
+
 const request = axios.create({
   baseURL: url,
   headers: {
