@@ -24,7 +24,7 @@ const name = subdomain.split("://")[1] || "app";
 const teamId = process.env.TEAM_ID || "unknown";
 const appId = process.env.APP_ID || "unknown";
 const portalKey = process.env.PROTAL_KEY || "unknown";
-let logFileName = `${currentDate.toISOString()}-${name}-${teamId}`;
+let logFileName = `${currentDate.toISOString().replace(/:/g, '-')}-${name}-${teamId}`;
 if (process.argv.includes("--from")) {
     const from = process.argv[process.argv.indexOf("--from") + 1];
     if (from === "menu") {

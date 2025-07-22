@@ -88,7 +88,7 @@ jobs:
         run: pnpm build
 
       - name: Install Chrome for Puppeteer
-        run: pnpx puppeteer browsers install chrome
+        run: npx puppeteer browsers install chrome
 
       - name: Run Puppeteer Script
         env:
