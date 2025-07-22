@@ -48,7 +48,7 @@ document.cookie.split(';').map(cookie => cookie.trim()).forEach(cookie => consol
 根据不同的场景来源方式，需要配置不同的环境变量：
 
 #### 从菜单获取场景
-- `PORTAL_ID`: 门户 ID，用于获取菜单列表
+- `PROTAL_KEY`: 门户 ID，用于获取菜单列表
 
 #### 从单个模块获取场景
 - `APP_ID`: 应用 ID，用于指定要处理的模块
@@ -72,7 +72,7 @@ COOKIE_DOMAIN=.example.com
 TEAM_ID=team-123
 
 # 从菜单获取场景
-PORTAL_ID=portal-456
+PROTAL_KEY=portal-456
 
 # 从单个模块获取场景
 APP_ID=app-789
@@ -121,7 +121,7 @@ pnpm start:module
 所有运行命令都支持以下参数：
 
 - `--from <source>`: 指定场景来源，可选值：
-  - `menu`: 获取门户菜单下的场景（默认），需要提供PORTAL_ID
+  - `menu`: 获取门户菜单下的场景（默认），需要提供PROTAL_KEY
   - `modules`: 获取所有模块下的场景
   - `module`: 获取指定模块下的场景，需要提供APP_ID
 - `--parallel <number>`: 设置并行处理的场景数量，默认为 4

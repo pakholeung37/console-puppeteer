@@ -21,13 +21,13 @@ const subdomain = host.split(".")[0];
 const name = subdomain.split("://")[1] || "app";
 const teamId = process.env.TEAM_ID || "unknown";
 const appId = process.env.APP_ID || "unknown";
-const portalId = process.env.PORTAL_ID || "unknown";
+const portalKey = process.env.PROTAL_KEY || "unknown";
 
 let logFileName = `${currentDate.toISOString()}-${name}-${teamId}`;
 if (process.argv.includes("--from")) {
   const from = process.argv[process.argv.indexOf("--from") + 1];
   if (from === "menu") {
-    logFileName += `-portal${portalId}`;
+    logFileName += `-portal${portalKey}`;
   } else if (from === "module") {
     logFileName += `-module${appId}`;
   }
@@ -197,14 +197,14 @@ type MenuItem = {
 
 async function getMenu() {
   const menu = await request.get<{ data: MenuItem[] }>(
-    `/api/trantor/menu/tree/${process.env.PORTAL_ID}`,
+    `/api/trantor/menu/tree/${process.env.PROTAL_KEY}`,
     {
       // params: {
-      //   appId: process.env.PORTAL_ID,
+      //   appId: process.env.PROTAL_KEY,
       //   teamId: process.env.TEAM_ID,
       // },
       headers: {
-        "Trantor2-App": process.env.PORTAL_ID,
+        "Trantor2-App": process.env.PROTAL_KEY,
         "Trantor2-Team": process.env.TEAM_ID,
         "Trantor2-Branch": process.env.BRANCH_ID,
       },
@@ -410,13 +410,13 @@ async function processQueue(
     await pushAllScenesFromModules();
   } else if (from === "module") {
     if (process.env.APP_ID === undefined) {
-      log.error("Please provide the portal id");
+      log.error("Please provide the portal key");
       process.exit(1);
     }
     await pushAllScenesFromModule(process.env.APP_ID);
   } else {
-    if (process.env.PORTAL_ID === undefined) {
-      log.error("Please provide the portal id");
+    if (process.env.PROTAL_KEY === undefined) {
+      log.error("Please provide the portal key");
       process.exit(1);
     }
     await pushAllScenesFromMenu();
