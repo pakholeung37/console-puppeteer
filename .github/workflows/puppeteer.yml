@@ -7,7 +7,6 @@ on:
         description: "主机地址 (HOST)"
         required: true
         type: string
-        default: "https://example.com"
 
       team_id:
         description: "团队ID (TEAM_ID)"
@@ -28,7 +27,6 @@ on:
         description: "Cookie名称 (COOKIE_NAME)"
         required: true
         type: string
-        default: "session"
 
       cookie_value:
         description: "Cookie值 (COOKIE_VALUE)"
