@@ -428,7 +428,13 @@ async function processQueue(
   const browser = await puppeteer.launch({
     headless,
     defaultViewport: null,
-    args: ["--start-maximized"],
+    args: [
+      "--start-maximized",
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
   });
 
   await bluebird.map(

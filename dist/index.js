@@ -333,7 +333,13 @@ async function processQueue(sceneMeta, index, browser) {
     const browser = await puppeteer_1.default.launch({
         headless,
         defaultViewport: null,
-        args: ["--start-maximized"],
+        args: [
+            "--start-maximized",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+        ],
     });
     await bluebird_1.default.map(queue, (scene, index) => processQueue(scene, index, browser), {
         concurrency: parallel,
