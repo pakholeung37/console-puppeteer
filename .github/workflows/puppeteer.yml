@@ -4,95 +4,89 @@ on:
   workflow_dispatch:
     inputs:
       host:
-        description: '主机地址 (HOST)'
+        description: "主机地址 (HOST)"
         required: true
         type: string
-        default: 'https://example.com'
-      
+        default: "https://example.com"
+
       team_id:
-        description: '团队ID (TEAM_ID)'
+        description: "团队ID (TEAM_ID)"
         required: true
         type: string
-        
+
       PROTAL_KEY:
-        description: '门户Key (PROTAL_KEY) - 从菜单运行时需要'
+        description: "门户Key (PROTAL_KEY) - 从菜单运行时需要"
         required: false
         type: string
-        
-      app_id:
-        description: '应用ID (APP_ID) - 从模块运行时需要'
-        required: false
-        type: string
-        
+
+      # app_id:
+      #   description: "应用ID (APP_ID) - 从模块运行时需要"
+      #   required: false
+      #   type: string
+
       cookie_name:
-        description: 'Cookie名称 (COOKIE_NAME)'
+        description: "Cookie名称 (COOKIE_NAME)"
         required: true
         type: string
-        default: 'session'
-        
+        default: "session"
+
       cookie_value:
-        description: 'Cookie值 (COOKIE_VALUE)'
+        description: "Cookie值 (COOKIE_VALUE)"
         required: true
         type: string
-        
+
       cookie_domain:
-        description: 'Cookie域名 (COOKIE_DOMAIN)'
+        description: "Cookie域名 (COOKIE_DOMAIN)"
         required: true
         type: string
-        default: '.terminus.io'
-        
+        default: ".terminus.io"
+
       from:
-        description: '运行模式 (--from)'
+        description: "运行模式 (--from)"
         required: true
         type: choice
         options:
-          - 'menu'
-          - 'module'
-          - 'modules'
-        default: 'menu'
-        
+          - "menu"
+          - "module"
+          - "modules"
+        default: "menu"
+
       parallel:
-        description: '并行数量 (--parallel)'
+        description: "并行数量 (--parallel)"
         required: false
         type: number
         default: 4
-        
+
       timeout:
-        description: '超时时间(毫秒) (--timeout)'
+        description: "超时时间(毫秒) (--timeout)"
         required: false
         type: number
         default: 30000
-        
-      headless:
-        description: '无头模式 (--headless)'
-        required: false
-        type: boolean
-        default: true
 
 jobs:
   run-puppeteer:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          
+          node-version: "18"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: latest
-          
+
       - name: Install dependencies
         run: pnpm install
-        
+
       - name: Build project
         run: pnpm build
-        
+
       - name: Install Chrome dependencies
         run: |
           sudo apt-get update
@@ -113,7 +107,7 @@ jobs:
             xdg-utils \
             libgbm1 \
             libxss1
-            
+
       - name: Run Puppeteer Script
         env:
           HOST: ${{ inputs.host }}
@@ -126,24 +120,24 @@ jobs:
           COOKIE_DOMAIN: ${{ inputs.cookie_domain }}
         run: |
           ARGS="--from ${{ inputs.from }}"
-          
+
           if [ -n "${{ inputs.parallel }}" ]; then
             ARGS="$ARGS --parallel ${{ inputs.parallel }}"
           fi
-          
+
           if [ -n "${{ inputs.timeout }}" ]; then
             ARGS="$ARGS --timeout ${{ inputs.timeout }}"
           fi
-          
+
           if [ "${{ inputs.headless }}" = "true" ]; then
             ARGS="$ARGS --headless true"
           else
             ARGS="$ARGS --headless false"
           fi
-          
+
           echo "Running with arguments: $ARGS"
           pnpm start $ARGS
-          
+
       - name: Upload logs
         uses: actions/upload-artifact@v4
         if: always()
@@ -151,7 +145,7 @@ jobs:
           name: puppeteer-logs-${{ github.run_number }}
           path: logs/
           retention-days: 30
-          
+
       - name: Upload error logs
         uses: actions/upload-artifact@v4
         if: failure()
