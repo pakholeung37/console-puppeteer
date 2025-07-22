@@ -135,7 +135,9 @@ log.info(`  PROTAL_KEY: ${process.env.PROTAL_KEY}`);
 log.info(`  APP_ID: ${process.env.APP_ID}`);
 log.info(`  BRANCH_ID: ${process.env.BRANCH_ID}`);
 log.info(`  COOKIE_NAME: ${process.env.COOKIE_NAME}`);
-log.info(`  COOKIE_VALUE: ${process.env.COOKIE_VALUE ? '[REDACTED]' : 'undefined'}`);
+log.info(`  COOKIE_VALUE: ${process.env.COOKIE_VALUE ?
+    `${process.env.COOKIE_VALUE.substring(0, 4)}***${process.env.COOKIE_VALUE.substring(process.env.COOKIE_VALUE.length - 4)}` :
+    'undefined'}`);
 log.info(`  COOKIE_DOMAIN: ${process.env.COOKIE_DOMAIN}`);
 log.info("Command Line Arguments:");
 log.info(`  Raw args: ${JSON.stringify(args)}`);
