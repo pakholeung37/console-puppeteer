@@ -260,7 +260,7 @@ async function replaceSceneKey(scenes) {
     });
 }
 async function processQueue(sceneMeta, index, browser) {
-    const retries = 2;
+    const retries = 1;
     for (let i = 0; i < retries; i++) {
         const page = await browser.newPage();
         // set cookie

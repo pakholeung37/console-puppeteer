@@ -341,7 +341,7 @@ async function processQueue(
   index: number,
   browser: Browser
 ) {
-  const retries = 2;
+  const retries = 1;
   for (let i = 0; i < retries; i++) {
     const page = await browser.newPage();
     // set cookie
