@@ -210,6 +210,16 @@ const queue: SceneMeta[] = [];
 
 let errorScenes: SceneMeta[] = [];
 
+// Progress tracking
+let completedScenes = 0;
+let totalScenes = 0;
+
+// Update progress function
+const updateProgress = (message: string = "") => {
+  completedScenes++;
+  log.progress(completedScenes, totalScenes, message);
+};
+
 type MenuItem = {
   routeType: "None" | "Scene";
   children: MenuItem[];
@@ -370,6 +380,7 @@ async function processQueue(
       // validate the sceneMeta
       if (!sceneMeta.appKey || !sceneMeta.key) {
         log.error("invalid sceneMeta", sceneMeta);
+        updateProgress("invalid scene");
         return;
       }
 
@@ -393,7 +404,7 @@ async function processQueue(
       }
 
       log.success("scene successfully saved", sceneUrl);
-      log.progress(queue.length - index - 1, queue.length, "scenes processed");
+      updateProgress("scenes completed");
       await page.close();
 
       break;
@@ -404,6 +415,7 @@ async function processQueue(
           ...sceneMeta,
           url: sceneUrl,
         });
+        updateProgress("scenes failed");
       }
       await page.close();
     }
@@ -449,6 +461,10 @@ async function processQueue(
 
   log.info("all scenes: ", queue.length);
 
+  // Set total scenes count for progress tracking
+  totalScenes = queue.length;
+  completedScenes = 0;
+
   const browser = await puppeteer.launch({
     headless,
     defaultViewport: null,
@@ -471,14 +487,22 @@ async function processQueue(
   // 从新跑一遍失败的场景
   const errorScenesCopy = [...errorScenes];
   log.warning("retry error scenes", errorScenes);
-  errorScenes = [];
-  await bluebird.map(
-    errorScenesCopy,
-    (scene, index) => processQueue(scene, index, browser),
-    {
-      concurrency: parallel,
-    }
-  );
+  
+  // Reset progress tracking for retry phase
+  if (errorScenesCopy.length > 0) {
+    log.info(`Starting retry phase for ${errorScenesCopy.length} failed scenes`);
+    totalScenes = errorScenesCopy.length;
+    completedScenes = 0;
+    errorScenes = [];
+    
+    await bluebird.map(
+      errorScenesCopy,
+      (scene, index) => processQueue(scene, index, browser),
+      {
+        concurrency: parallel,
+      }
+    );
+  }
 
   log.info("error scenes", errorScenes);
   log.info("error scenes count", errorScenes.length);
